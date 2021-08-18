@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
 project(sto)
-
 set(CMAKE_CXX_STANDARD 17)
 if(APPLE)
     set(PLATFORM_LIBRARIES pthread m)
@@ -12,12 +11,20 @@ include_directories(masstree-beta)
 include_directories(third-party)
 include_directories(third-party/xxHash)
 include_directories(third-party/rpmalloc)
-
 include_directories(lib sto-core legacy datatype benchmark)
+
+include_directories(hot/include)
+include_directories(hot/include/hot)
+include_directories(hot/include/hot/commons)
+include_directories(hot/include/hot/rowex)
+include_directories(hot/include/hot/singlethreaded)
+include_directories(hot/include/idx)
+include_directories(hot/include/idx/contenthelpers)
+
+ADD_SUBDIRECTORY(hot)
 
 add_subdirectory(third-party/xxHash)
 add_subdirectory(masstree-beta)
-
 add_subdirectory(lib)
 add_subdirectory(sto-core)
 add_subdirectory(datatype)

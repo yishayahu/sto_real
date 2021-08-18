@@ -30,7 +30,7 @@ private:
     }
     TRcuGroup(const TRcuGroup&) = delete;
     ~TRcuGroup() {
-        assert(head_ == tail_);
+//        assert(head_ == tail_);
     }
 
 public:

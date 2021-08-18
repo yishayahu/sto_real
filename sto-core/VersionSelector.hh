@@ -117,6 +117,15 @@ struct example_row {
     uint32_t d_date;
     uint32_t d_tax;
     uint32_t d_next_oid;
+    void copy_into(example_row* dst) const {
+
+        dst->d_ytd = d_ytd;
+        dst->d_payment_cnt = d_payment_cnt;
+        dst->d_date = d_date;
+        dst->d_tax = d_tax;
+        dst->d_next_oid = d_next_oid;
+
+    }
 };
 // The programer can annotate something like this:
 //

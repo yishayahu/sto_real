@@ -77,8 +77,8 @@ int main(int argc, const char * const *argv) {
     auto time_limit = p.time_limit;
     std::cout << "Number of threads: " << nthreads << std::endl;
 
-    r_type_wpred r_wpred(nthreads, time_limit, db_wpred);
-    r_type_nopred r_nopred(nthreads, time_limit, db_nopred);
+    r_type_wpred r_wpred(nthreads, time_limit, &db_wpred);
+    r_type_nopred r_nopred(nthreads, time_limit, &db_nopred);
 
     size_t ncommits;
 

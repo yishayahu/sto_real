@@ -48,13 +48,17 @@ use the following PPA package:
 $ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 $ sudo apt update
 $ sudo apt install g++-7
+$ sudo apt install libtbb-dev
+$ pip3 install numpy
+$ pip3 install plac
+
 ```
 
 ### Build
 
 1. Clone the git repository
 ```bash
-$ git clone https://github.com/readablesystems/sto.git
+$ git clone https://github.com/yishayahu/sto_real.git
 $ cd sto
 ```
 
@@ -91,6 +95,23 @@ by continuous integration.
 - `make clean`: You know what it does.
 
 See [Wiki](https://github.com/readablesystems/sto/wiki) for advanced buid options.
+## Run HOT Ordered Index algorithm
+### Recreate report results
+- `python3 exp_runner.py hot -c`: runs all the supported benchmarks and creates res_hot.json that contains the throughput and memory usage.
+- go to Voter_bench.hh, Predicate_bench.hh and MicroBenchmarks.cc and change to masstree (use the documentation).
+- `python3 exp_runner.py masstree -c`: runs all the supported benchmarks and creates res_masstree.json that contains the throughput and memory usage.
+- `python3 graph_creator.py` creates all the graphs that are shown in the report.
+### run tests
+```bash
+make unit-dboindex_hot
+./unit-dboindex_hot
+```
+### view changes from source repository
+replace {latest commit} with the current latest commit:
+https://github.com/yishayahu/sto_real/compare/013f5e9b..{latest_commit}
+ignore changes in HOT, we did not change anything from the original HOT repository.
+
+
 
 ## IDE Support & cmake
 

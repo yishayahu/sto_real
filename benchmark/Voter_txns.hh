@@ -84,7 +84,6 @@ bool voter_runner<DBParams>::vote_inner(const phone_number_str& tel, int32_t id)
         std::tie(success, result) = db.view_votes_by_id_state().insert_row(v_votes_id_state_key(id, vr->state), new_row);
         if (!success)
             return false;
-        assert(!result);
     }
 
     return true;

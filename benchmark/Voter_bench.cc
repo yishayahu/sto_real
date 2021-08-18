@@ -106,7 +106,7 @@ public:
 
         profiler.finish(total_commit_txns);
 
-        delete (&db);
+//        delete (&db);
         return 0;
     }
 };

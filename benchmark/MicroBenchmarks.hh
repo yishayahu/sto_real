@@ -16,15 +16,15 @@
 
 #include "sampling.hh"
 #include "PlatformFeatures.hh"
-
+#include "DB_hot_oindex.hh"
 namespace ubench {
 
 using namespace db_params;
 using bench::db_profiler;
 
-enum class DsType : int {none, masstree};
+enum class DsType : int {none, masstree, hot};
 
-const char *datatype_names[] = {"none", "masstree"};
+const char *datatype_names[] = {"none", "masstree","hot"};
 
 inline DsType parse_datatype(const char *s) {
     if (s == nullptr)
@@ -373,9 +373,13 @@ public:
 template <typename IntType>
 struct MasstreeIntKey {
     explicit MasstreeIntKey(IntType k) : k_(bench::bswap(k)) {}
+    explicit MasstreeIntKey() : k_(bench::bswap(0)) {}
 
     operator lcdf::Str() const {
         return lcdf::Str((const char *)this, sizeof(*this));
+    }
+    bool operator==(const MasstreeIntKey& other) const{
+        return k_ == other.k_;
     }
 
     IntType k_;
@@ -389,7 +393,8 @@ public:
     typedef typename compute_value_type<WLImpl::RTParams::granules>::type value_type;
     typedef typename value_type::NamedColumn nc;
     typedef typename bench::ordered_index<key_type, value_type, DBParams> index_type;
-    typedef typename bench::access_t access_t;
+    typedef typename bench::RowAccess rowAccess;
+
 
     explicit MasstreeTester(size_t num_threads) : Base(num_threads), mt_() {}
 
@@ -408,8 +413,7 @@ public:
         switch(op.type) {
             case OpType::read:
                 std::tie(success, std::ignore, std::ignore, std::ignore)
-                        = mt_.select_row(key_type(op.key),
-                                         {{nc::f1, access_t::read}, {nc::f3, access_t::read}, {nc::f5, access_t::read}, {nc::f7, access_t::read}});
+                        = mt_.select_row(key_type(op.key),rowAccess::ObserveValue);
                 break;
             case OpType::write: {
                 auto v = Sto::tx_alloc<value_type>();
@@ -422,7 +426,7 @@ public:
                 const value_type* value;
                 std::tie(success, std::ignore, rid, value)
                         = mt_.select_row(key_type(op.key),
-                                         {{nc::f1, access_t::update}, {nc::f3, access_t::update}, {nc::f5, access_t::update}, {nc::f7, access_t::update}});
+                                         rowAccess::UpdateValue);
                 if (!success)
                     break;
                 value_type *new_v = Sto::tx_alloc(value);
@@ -441,19 +445,84 @@ private:
     index_type mt_;
 };
 
+template <typename WLImpl, typename DBParams>
+class HotTester : public Tester<HotTester<WLImpl, DBParams>, WLImpl> {
+public:
+    typedef Tester<HotTester<WLImpl, DBParams>, WLImpl> Base;
+    typedef sampling::index_t key_type;
+    typedef typename compute_value_type<WLImpl::RTParams::granules>::type value_type;
+    typedef typename value_type::NamedColumn nc;
+    typedef typename bench::hot_ordered_index<key_type, value_type, DBParams> index_type;
+    typedef typename bench::RowAccess rowAccess;
+
+    explicit HotTester(size_t num_threads) : Base(num_threads), ht_() {}
+
+    void prepopulate_impl() {
+        for (unsigned int i = 0; i < params.key_sz; ++i)
+            ht_.nontrans_put(key_type(i), {i, i, i, i, i, i, i, i});
+    }
+
+    void thread_init_impl() {
+        ht_.thread_init();
+    }
+
+    bool do_op_impl(const RWOperation& op) {
+        //std::cout << op << std::endl;
+        bool success;
+        switch(op.type) {
+            case OpType::read:
+                std::tie(success, std::ignore, std::ignore, std::ignore)
+                        = ht_.select_row(key_type(op.key),rowAccess::ObserveValue);
+                break;
+            case OpType::write: {
+                auto v = Sto::tx_alloc<value_type>();
+                *v = {op.value, op.value, op.value, op.value, op.value, op.value, op.value, op.value};
+                std::tie(success, std::ignore) = ht_.insert_row(key_type(op.key), v, true);
+                break;
+            }
+            case OpType::inc: {
+                uintptr_t rid;
+                const value_type* value;
+                std::tie(success, std::ignore, rid, value)
+                        = ht_.select_row(key_type(op.key),
+                                         rowAccess::UpdateValue);
+                if (!success)
+                    break;
+                value_type *new_v = Sto::tx_alloc(value);
+                new_v->f1 += 1;
+                new_v->f3 += 1;
+                new_v->f5 += 1;
+                new_v->f7 += 1;
+                ht_.update_row(rid, new_v);
+                break;
+            }
+        }
+        return success;
+    }
+
+private:
+    index_type ht_;
+};
+
 template <DsType DS, typename WLImpl, typename DBParams>
 struct TesterSelector {};
+
+template <typename WLImpl, typename DBParams>
+struct TesterSelector<DsType::hot, WLImpl, DBParams> {
+    typedef HotTester<WLImpl, DBParams> type;
+};
 
 template <typename WLImpl, typename DBParams>
 struct TesterSelector<DsType::masstree, WLImpl, DBParams> {
     typedef MasstreeTester<WLImpl, DBParams> type;
 };
 
-template <int G, typename DBParams>
-using MtZipfTesterDefault = TesterSelector<DsType::masstree, WLZipfRW<wl_default_params<G>>, DBParams>;
+template <int G, typename DBParams,DsType DS>
+using MtZipfTesterDefault = TesterSelector<DS, WLZipfRW<wl_default_params<G>>, DBParams>;
 
-template <int G, typename DBParams>
-using MtZipfTesterMeasure = TesterSelector<DsType::masstree, WLZipfRW<wl_measurement_params<G>>, DBParams>;
+template <int G, typename DBParams,DsType DS>
+using MtZipfTesterMeasure = TesterSelector<DS, WLZipfRW<wl_measurement_params<G>>, DBParams>;
 
 };
+
 

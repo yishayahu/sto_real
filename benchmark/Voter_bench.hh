@@ -6,6 +6,8 @@
 #include "Voter_structs.hh"
 #include "DB_index.hh"
 #include "DB_params.hh"
+#include "DB_hot_oindex.hh"
+
 
 namespace voter {
 
@@ -17,8 +19,11 @@ struct constants {
 template<typename DBParams>
 class voter_db {
 public:
+    //for masstree change to true
     template<typename K, typename V>
-    using OIndex = ordered_index<K, V, DBParams>;
+    using OIndex = typename std::conditional<false,
+    bench::ordered_index<K, V, DBParams>,
+    bench::hot_ordered_index<K, V, DBParams>>::type;
 
     typedef OIndex<contestant_key, contestant_row> contestant_tbl_type;
     typedef OIndex<area_code_state_key, area_code_state_row> areacodestate_tbl_type;

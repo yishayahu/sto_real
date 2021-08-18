@@ -213,7 +213,7 @@ private:
         weight_type pmf;
         for (auto i = this->begin; i <= this->end; ++i) {
             double p = 1.0/(std::pow((double)(i - this->begin + 1), skewness)*sum_);
-            //std::cout << p << std::endl;
+
             pmf.push_back(p);
         }
         return pmf;

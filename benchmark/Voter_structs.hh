@@ -22,6 +22,8 @@ struct phone_number {
     phone_number() = default;
     explicit phone_number(const phone_number_str& phs)
             : area_code(phs.area_code), number(phs.number) {}
+    bool operator == (const phone_number &  other)const
+    { return other.area_code == area_code &&  other.number == number; }
 };
 
 
@@ -33,7 +35,13 @@ struct contestant_key_bare {
     int32_t number;
 
     explicit contestant_key_bare(int32_t id) : number(bswap(id)) {}
+    explicit contestant_key_bare() : number() {}
+    bool operator == (const contestant_key_bare &  other)const
+    { return other.number == number ; }
+
+
 };
+
 
 typedef masstree_key_adapter<contestant_key_bare> contestant_key;
 
@@ -49,6 +57,10 @@ struct area_code_state_key_bare {
 
     explicit area_code_state_key_bare(const std::string& a)
             : area_code(a) {}
+    explicit area_code_state_key_bare()
+            : area_code() {}
+    bool operator == (const area_code_state_key_bare &  other)const
+    { return other.area_code == area_code ; }
 };
 
 typedef masstree_key_adapter<area_code_state_key_bare> area_code_state_key;
@@ -65,6 +77,10 @@ struct votes_key_bare {
     int32_t vote_id;
 
     explicit votes_key_bare(int32_t id) : vote_id(bswap(id)) {}
+    explicit votes_key_bare() : vote_id() {}
+    bool operator == (const votes_key_bare &  other)const
+    { return other.vote_id == vote_id ; }
+
 };
 
 typedef masstree_key_adapter<votes_key_bare> votes_key;
@@ -89,7 +105,8 @@ struct v_votes_phone_key_bare {
 
     explicit v_votes_phone_key_bare(const phone_number_str& ph)
             : tel(ph) {}
-
+    bool operator == (const v_votes_phone_key_bare &  other)const
+    { return other.tel == tel ; }
     friend masstree_key_adapter<v_votes_phone_key_bare>;
 private:
     v_votes_phone_key_bare() = default;
@@ -110,6 +127,8 @@ struct __attribute__((packed)) v_votes_id_state_key_bare {
 
     explicit v_votes_id_state_key_bare(int32_t id, const fix_string<2>& st)
             : number(bswap(id)), state(st) {}
+    bool operator == (const v_votes_id_state_key_bare &  other)const
+    { return other.number == number && other.state == state ; }
     friend masstree_key_adapter<v_votes_id_state_key_bare>;
 private:
     v_votes_id_state_key_bare() = default;

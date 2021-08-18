@@ -67,61 +67,105 @@ inline void print_usage(const char *prog) {
     std::cout << ss.str() << std::flush;
 }
 
-template <int G, typename P, bool InsMeasure>
+template <int G, typename P, bool InsMeasure,ubench::DsType DS>
 using tester = typename std::conditional<InsMeasure,
-        ubench::MtZipfTesterMeasure<G, P>,
-        ubench::MtZipfTesterDefault<G, P>>::type;
+        ubench::MtZipfTesterMeasure<G, P,DS>,
+        ubench::MtZipfTesterDefault<G, P,DS>>::type;
+
 
 template <int G, bool InsMeasure>
-inline void instantiate_and_execute_testers() {
+inline void instantiate_and_execute_testers(ubench::DsType DS) {
+    using ubench::params;
     using ubench::MtZipfTesterDefault;
     using ubench::MtZipfTesterMeasure;
-    using ubench::params;
     using db_params::db_params_id;
-
-    switch (params.dbid) {
-        case db_params_id::Default: {
-            typename tester<G, db_params::db_default_params, InsMeasure>::type t(params.nthreads);
-            t.execute();
-            break;
+    //for masstree change to false
+    if (true){
+        switch (params.dbid) {
+            case db_params_id::Default: {
+                typename tester<G, db_params::db_default_params, InsMeasure,ubench::DsType::hot>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::Opaque: {
+                typename tester<G, db_params::db_opaque_params, InsMeasure,ubench::DsType::hot>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::TwoPL: {
+                typename tester<G, db_params::db_2pl_params, InsMeasure,ubench::DsType::hot>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::Adaptive: {
+                typename tester<G, db_params::db_adaptive_params, InsMeasure,ubench::DsType::hot>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::Swiss: {
+                typename tester<G, db_params::db_swiss_params, InsMeasure,ubench::DsType::hot>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::TicToc: {
+                typename tester<G, db_params::db_tictoc_params, InsMeasure,ubench::DsType::hot>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            default:
+                std::cerr << "invalid ccid" << std::endl;
+                abort();
         }
-        case db_params_id::Opaque: {
-            typename tester<G, db_params::db_opaque_params, InsMeasure>::type t(params.nthreads);
-            t.execute();
-            break;
-        }
-        case db_params_id::TwoPL: {
-            typename tester<G, db_params::db_2pl_params, InsMeasure>::type t(params.nthreads);
-            t.execute();
-            break;
-        }
-        case db_params_id::Adaptive: {
-            typename tester<G, db_params::db_adaptive_params, InsMeasure>::type t(params.nthreads);
-            t.execute();
-            break;
-        }
-        case db_params_id::Swiss: {
-            typename tester<G, db_params::db_swiss_params, InsMeasure>::type t(params.nthreads);
-            t.execute();
-            break;
-        }
-        case db_params_id::TicToc: {
-            typename tester<G, db_params::db_tictoc_params, InsMeasure>::type t(params.nthreads);
-            t.execute();
-            break;
-        }
-        default:
-            std::cerr << "invalid ccid" << std::endl;
-            abort();
     }
+    else {
+        assert(DS == ubench::DsType::masstree);
+        switch (params.dbid) {
+            case db_params_id::Default: {
+                typename tester<G, db_params::db_default_params, InsMeasure,ubench::DsType::masstree>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::Opaque: {
+                typename tester<G, db_params::db_opaque_params, InsMeasure,ubench::DsType::masstree>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::TwoPL: {
+                typename tester<G, db_params::db_2pl_params, InsMeasure,ubench::DsType::masstree>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::Adaptive: {
+                typename tester<G, db_params::db_adaptive_params, InsMeasure,ubench::DsType::masstree>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::Swiss: {
+                typename tester<G, db_params::db_swiss_params, InsMeasure,ubench::DsType::masstree>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            case db_params_id::TicToc: {
+                typename tester<G, db_params::db_tictoc_params, InsMeasure,ubench::DsType::masstree>::type t(params.nthreads);
+                t.execute();
+                break;
+            }
+            default:
+                std::cerr << "invalid ccid" << std::endl;
+                abort();
+        }
+
+    }
+
+
 }
 
 template <int G>
-inline void instantiate_and_exec_outer(bool ins_measure) {
+inline void instantiate_and_exec_outer(bool ins_measure,ubench::DsType DS) {
     if (ins_measure)
-        instantiate_and_execute_testers<G, true>();
+        instantiate_and_execute_testers<G, true>(DS);
     else
-        instantiate_and_execute_testers<G, false>();
+        instantiate_and_execute_testers<G, false>(DS);
 }
 
 int main(int argc, const char *argv[]) {
@@ -138,7 +182,7 @@ int main(int argc, const char *argv[]) {
     params.write_percent = 0.2;
     params.opspertrans = 20;
     params.opspertrans_ro = params.opspertrans;
-    params.ntrans = 2000000;
+    params.ntrans = 2000000; 
     params.nthreads = 4;
     params.proc_frequency_hz = 0;
     params.dump_trace = false;
@@ -227,20 +271,19 @@ int main(int argc, const char *argv[]) {
     db_params::constants::processor_tsc_frequency = freq;
     params.proc_frequency_hz = (uint64_t)(freq * db_params::constants::billion);
 
-    always_assert(params.datatype == ubench::DsType::masstree, "Only Masstree is currently supported");
 
     switch (params.granules) {
         case 1:
-            instantiate_and_exec_outer<1>(params.ins_measure);
+            instantiate_and_exec_outer<1>(params.ins_measure,params.datatype);
             break;
         case 2:
-            instantiate_and_exec_outer<2>(params.ins_measure);
+            instantiate_and_exec_outer<2>(params.ins_measure,params.datatype);
             break;
         case 4:
-            instantiate_and_exec_outer<4>(params.ins_measure);
+            instantiate_and_exec_outer<4>(params.ins_measure,params.datatype);
             break;
         case 8:
-            instantiate_and_exec_outer<8>(params.ins_measure);
+            instantiate_and_exec_outer<8>(params.ins_measure,params.datatype);
             break;
         default:
             std::cerr << "Error: granularity=" << params.granules << " not supported." << std::endl;

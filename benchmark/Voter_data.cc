@@ -1,4 +1,6 @@
-#include "Voter_bench.hh"
+#include <string>
+#include <vector>
+
 
 namespace voter {
 

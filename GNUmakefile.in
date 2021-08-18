@@ -15,7 +15,7 @@ CXX = @CXX@
 CPPFLAGS := -std=c++17
 DEPSDIR := .deps
 DEPCFLAGS = -MD -MF $(DEPSDIR)/$*.d -MP
-LIBS = @LIBS@ $(MASSTREEDIR)/libjson.a $(LIBMALLOC) -lpthread -lm -lnuma
+LIBS = @LIBS@ $(MASSTREEDIR)/libjson.a $(LIBMALLOC) -lpthread -lm -lnuma -ltbb
 LIBOBJS = @LIBOBJS@
 LDFLAGS = @LDFLAGS@
 MASSTREEDIR = @MASSTREEDIR@
@@ -204,6 +204,7 @@ ACT_UNIT_PROGRAMS = \
 	unit-tmvarray \
 	unit-hashtable \
 	unit-dboindex \
+	unit-dboindex_hot \
 	unit-mvcc-access-all \
 	unit-tmvbox-concurrent \
 	unit-dbindex-concurrent
@@ -262,10 +263,10 @@ $(OBJ)/%.o: sto-core/%.cc config.h $(DEPSDIR)/stamp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OPTFLAGS) $(DEPCFLAGS) -include config.h -c -o $@ $<
 
 $(OBJ)/%.o: test/%.cc config.h $(DEPSDIR)/stamp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OPTFLAGS) $(DEPCFLAGS) -include config.h -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OPTFLAGS) $(DEPCFLAGS) -Ihot/include -march=native -include config.h -c -o $@ $<
 
 $(OBJ)/%.o: benchmark/%.cc config.h $(DEPSDIR)/stamp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OPTFLAGS) $(DEPCFLAGS) -include config.h -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OPTFLAGS) $(DEPCFLAGS) -Ihot/include -march=native -include config.h -c -o $@ $<
 
 $(OBJ)/xxhash.o: third-party/xxHash/xxhash.c
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OPTFLAGS) -c -o $@ $<
@@ -364,6 +365,9 @@ unit-hashtable: $(OBJ)/unit-hashtable.o $(STO_DEPS)
 	$(CXX) $(CXXFLAGS) $(OPTFLAGS) -o $@ $< $(STO_OBJS) $(LDFLAGS) $(LIBS)
 
 unit-dboindex: $(OBJ)/unit-dboindex.o $(INDEX_DEPS)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) -o $@ $< $(INDEX_DEPS) $(LDFLAGS) $(LIBS)
+
+unit-dboindex_hot: $(OBJ)/unit-dboindex_hot.o $(INDEX_DEPS)
 	$(CXX) $(CXXFLAGS) $(OPTFLAGS) -o $@ $< $(INDEX_DEPS) $(LDFLAGS) $(LIBS)
 
 unit-mvcc-access-all: $(OBJ)/unit-mvcc-access-all.o $(INDEX_DEPS) $(XXHASH_OBJ)

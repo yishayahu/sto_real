@@ -4,6 +4,8 @@
 #include "TBox.hh"
 #include "TCounter.hh"
 #include "DB_params.hh"
+#include "DB_hot_oindex.hh"
+
 
 namespace predicate_bench {
 
@@ -15,11 +17,15 @@ template <typename DBRow> struct predicate_row {
     explicit predicate_row(int v) : balance(v) {}
 };
 
-struct predicate_key {
+
+struct predicate_key  {
     uint64_t k;
 
     explicit predicate_key(uint64_t p_k) : k(p_k) {}
-    explicit predicate_key(lcdf::Str& mt_key) { 
+    explicit predicate_key() {}
+    bool operator == (const predicate_key &  other)const
+    { return other.k == k ; }
+    explicit predicate_key(lcdf::Str& mt_key) {
         assert(mt_key.length() == sizeof(*this));
         memcpy(this, mt_key.data(), mt_key.length());
     }
@@ -31,8 +37,13 @@ struct predicate_key {
 template <typename DBParams, typename DBRow>
 class predicate_db {
 public:
+    //for masstree change to true
     template <typename K, typename V>
-    using OIndex = bench::ordered_index<K, V, DBParams>;
+    using OIndex = typename std::conditional<false,
+    bench::ordered_index<K, V, DBParams>,
+    bench::hot_ordered_index<K, V, DBParams>>::type;
+
+
     typedef OIndex<predicate_key, predicate_row<DBRow>> table_type;
 
     table_type& table() {
@@ -65,7 +76,7 @@ public:
         TRANSACTION_E {
             bool abort, result;
             const void *value;
-            std::tie(abort, result, std::ignore, value) = db.table().select_row(predicate_key(key), RowAccess::ObserveValue);
+            std::tie(abort, result, std::ignore, value) = db->table().select_row(predicate_key(key), RowAccess::ObserveValue);
             auto r = reinterpret_cast<predicate_row<DBRow> *>(const_cast<void *>(value));
             if (r->balance > 10) {
                 r->balance = r->balance - 1;
@@ -79,7 +90,7 @@ public:
         TRANSACTION_E {
             bool abort, result;
             const void *value;
-            std::tie(abort, result, std::ignore, value) = db.table().select_row(predicate_key(key), RowAccess::ObserveValue);
+            std::tie(abort, result, std::ignore, value) = db->table().select_row(predicate_key(key), RowAccess::ObserveValue);
             auto r = reinterpret_cast<predicate_row<DBRow> *>(const_cast<void *>(value));
             volatile auto s = r->balance + 1000;
             (void)s;  // Prevent s from being optimized away
@@ -102,7 +113,7 @@ public:
         return combined_txn_count;
     }
 
-    predicate_runner(int nthreads, double time_limit, predicate_db<DBParams, DBRow>& database)
+    predicate_runner(int nthreads, double time_limit, predicate_db<DBParams, DBRow>* database)
         : num_runners(nthreads), tsc_elapse_limit(), db(database) {
         using db_params::constants;
         tsc_elapse_limit = (uint64_t)(time_limit * constants::processor_tsc_frequency * constants::billion);
@@ -111,9 +122,9 @@ public:
 private:
     void runner_thread(int runner_id, size_t& committed_txns, bool readonly) {
         ::TThread::set_id(runner_id);
-        db.table().thread_init();
+        db->table().thread_init();
         std::mt19937 gen(runner_id);
-        std::uniform_int_distribution<uint64_t> dist(0, db.size() - 1);
+        std::uniform_int_distribution<uint64_t> dist(0, db->size() - 1);
 
         size_t thread_txn_count = 0;
         auto tsc_begin = read_tsc();
@@ -135,7 +146,7 @@ private:
 
     int num_runners;
     uint64_t tsc_elapse_limit;
-    predicate_db<DBParams, DBRow> db;
+    predicate_db<DBParams, DBRow>* db;
 };
 
 };
